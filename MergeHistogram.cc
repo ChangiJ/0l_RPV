@@ -3,8 +3,8 @@
 #include <TString.h>
 #include <iostream>
 
-void MergeHistogram() {
-    TFile *inputFile = new TFile("variations/output_impact_UL201678_UL201678.root", "READ");  // hadd inputFile 2016pre 2016post 2017 2018
+void merge_histogram() {
+    TFile *inputFile = new TFile("variations/output_impact_UL201678_UL201678.root", "READ");
     if (!inputFile || inputFile->IsZombie()) {
         std::cerr << "Error: Cannot open input file!" << std::endl;
         return;
@@ -44,21 +44,31 @@ void MergeHistogram() {
         }
         dir->cd();
 
+        // nominal
         for (const auto &procname : processes) {
-          or (int ikap : kappa_vals) {
+                TString histPath = Form("bin%i/%s", ibin, procname.Data());
+                TH1F *hist = (TH1F*)inputFile->Get(histPath);
+                if (hist) {
+                        TH1F *clonedHist = (TH1F*)hist->Clone();
+                        clonedHist->Write();
+                }
+        }
+
+        // up and down
+//=========================================================================
+        for (const auto &procname : processes) {
+            for (int ikap : kappa_vals) {
                 for (const auto &var : yearVariants) {
                     for (const auto &pattern : histPatterns) {
-                        TString histName2016, histName1718, mergedHistName;
+                            TString histName2016, histName1718, mergedHistName;
 
-                        if (pattern.Contains("mjsyst_r")) {
-                            for (int r : r_vals) {
-                                histName2016 = Form("bin%i/%s", ibin, Form(pattern.Data(), procname.Data(), r, ind_ijet, procname.Data(), Form("2016%s", var.Data())));
-                                histName1718 = Form("bin%i/%s", ibin, Form(pattern.Data(), procname.Data(), r, ind_ijet, procname.Data(), Form("1718%s", var.Data())));
-                                mergedHistName = Form(pattern.Data(), procname.Data(), r, ind_ijet, procname.Data(), Form("201678%s", var.Data()));
+                            histName2016 = Form("bin%i/%s", ibin, Form(pattern.Data(), procname.Data(), ikap, ind_ijet,Form("2016%s", var.Data())));
+                            histName1718 = Form("bin%i/%s", ibin, Form(pattern.Data(), procname.Data(), ikap, ind_ijet,Form("1718%s", var.Data())));
+                            mergedHistName = Form(pattern.Data(), procname.Data(), ikap, ind_ijet, Form("201678%s", var.Data()));
 
-                                TH1F *hist2016 = (TH1F*)inputFile->Get(histName2016);
-                                TH1F *hist1718 = (TH1F*)inputFile->Get(histName1718);
-                                if (hist2016 || hist1718) {
+                            TH1F *hist2016 = (TH1F*)inputFile->Get(histName2016);
+                            TH1F *hist1718 = (TH1F*)inputFile->Get(histName1718);
+                            if (hist2016 || hist1718) {
                                     TH1F *mergedHist = nullptr;
                                     if (hist2016) mergedHist = (TH1F*)hist2016->Clone(mergedHistName);
                                     else mergedHist = (TH1F*)hist1718->Clone(mergedHistName);
@@ -66,9 +76,18 @@ void MergeHistogram() {
                                     if (hist2016 && hist1718) mergedHist->Add(hist1718);
 
                                     mergedHist->Write();
-                                }
                             }
-                        } else {
+                    }
+                }
+            }
+        }
+//=============================================================
+        for (const auto &procname : processes) {
+            for (int ikap : kappa_vals) {
+                for (const auto &var : yearVariants) {
+                    for (const auto &pattern : histPatterns) {
+                            TString histName2016, histName1718, mergedHistName;
+
                             histName2016 = Form("bin%i/%s", ibin, Form(pattern.Data(), procname.Data(), ikap, ind_ijet, procname.Data(), Form("2016%s", var.Data())));
                             histName1718 = Form("bin%i/%s", ibin, Form(pattern.Data(), procname.Data(), ikap, ind_ijet, procname.Data(), Form("1718%s", var.Data())));
                             mergedHistName = Form(pattern.Data(), procname.Data(), ikap, ind_ijet, procname.Data(), Form("201678%s", var.Data()));
@@ -76,15 +95,14 @@ void MergeHistogram() {
                             TH1F *hist2016 = (TH1F*)inputFile->Get(histName2016);
                             TH1F *hist1718 = (TH1F*)inputFile->Get(histName1718);
                             if (hist2016 || hist1718) {
-                                TH1F *mergedHist = nullptr;
-                                if (hist2016) mergedHist = (TH1F*)hist2016->Clone(mergedHistName);
-                                else mergedHist = (TH1F*)hist1718->Clone(mergedHistName);
+                                    TH1F *mergedHist = nullptr;
+                                    if (hist2016) mergedHist = (TH1F*)hist2016->Clone(mergedHistName);
+                                    else mergedHist = (TH1F*)hist1718->Clone(mergedHistName);
 
-                                if (hist2016 && hist1718) mergedHist->Add(hist1718);
+                                    if (hist2016 && hist1718) mergedHist->Add(hist1718);
 
-                                mergedHist->Write();
+                                    mergedHist->Write();
                             }
-                        }
                     }
                 }
             }
@@ -96,3 +114,4 @@ void MergeHistogram() {
 
     std::cout << "Merged histograms saved to merged_output.root" << std::endl;
 }
+
